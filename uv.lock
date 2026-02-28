@@ -145,6 +145,42 @@ wheels = [
 ]
 
 [[package]]
+name = "frenum"
+version = "0.1.0"
+source = { editable = "." }
+
+[package.optional-dependencies]
+all = [
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "pyyaml" },
+]
+dev = [
+    { name = "pytest" },
+    { name = "pyyaml" },
+    { name = "ruff" },
+]
+langgraph = [
+    { name = "langchain-core" },
+    { name = "langgraph" },
+]
+yaml = [
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "frenum", extras = ["yaml", "langgraph"], marker = "extra == 'all'" },
+    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3" },
+    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
+    { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
+]
+provides-extras = ["yaml", "langgraph", "all", "dev"]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -314,42 +350,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/4f/01/c26b1d3a68764acd0
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/c9/2d5e5f654f97a4d38a0ff1b3004751c2cd81ceca05d603174e49f942b196/langsmith-0.7.9-py3-none-any.whl", hash = "sha256:e73478f4c4ae9b7407e0fcdced181f9f8b0e024c62a1552dbf0667ef6b19e82d", size = 344099, upload-time = "2026-02-27T22:37:57.497Z" },
 ]
-
-[[package]]
-name = "obex"
-version = "0.1.0"
-source = { editable = "." }
-
-[package.optional-dependencies]
-all = [
-    { name = "langchain-core" },
-    { name = "langgraph" },
-    { name = "pyyaml" },
-]
-dev = [
-    { name = "pytest" },
-    { name = "pyyaml" },
-    { name = "ruff" },
-]
-langgraph = [
-    { name = "langchain-core" },
-    { name = "langgraph" },
-]
-yaml = [
-    { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3" },
-    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2" },
-    { name = "obex", extras = ["yaml", "langgraph"], marker = "extra == 'all'" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
-    { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
-]
-provides-extras = ["yaml", "langgraph", "all", "dev"]
 
 [[package]]
 name = "orjson"

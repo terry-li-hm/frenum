@@ -1,4 +1,4 @@
-"""Core evaluation engine for obex."""
+"""Core evaluation engine for frenum."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from obex._types import (
+from frenum._types import (
     Decision,
     EvalResult,
     RuleConfig,
@@ -16,7 +16,7 @@ from obex._types import (
     ToolCall,
     ToolCallBlocked,
 )
-from obex.rules import get_handler
+from frenum.rules import get_handler
 
 
 class Engine:
@@ -41,14 +41,14 @@ class Engine:
     def from_yaml(cls, path: str | Path, **kwargs: Any) -> Engine:
         """Load engine from a YAML config file.
 
-        Requires pyyaml: pip install obex[yaml]
+        Requires pyyaml: pip install frenum[yaml]
         """
         try:
             import yaml
         except ImportError:
             raise ImportError(
                 "pyyaml is required for YAML config loading. "
-                "Install it with: pip install obex[yaml]"
+                "Install it with: pip install frenum[yaml]"
             ) from None
 
         path = Path(path)

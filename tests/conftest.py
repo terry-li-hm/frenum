@@ -1,8 +1,8 @@
-"""Shared fixtures for obex tests."""
+"""Shared fixtures for frenum tests."""
 
 import pytest
 
-from obex._types import RuleConfig, RuleType, ToolCall
+from frenum._types import RuleConfig, RuleType, ToolCall
 
 
 @pytest.fixture

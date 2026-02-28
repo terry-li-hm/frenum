@@ -1,4 +1,4 @@
-"""Built-in rule implementations for obex."""
+"""Built-in rule implementations for frenum."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from obex._types import Decision, RuleConfig, RuleResult, RuleType, ToolCall
+from frenum._types import Decision, RuleConfig, RuleResult, RuleType, ToolCall
 
 # Rule handler registry
 RuleHandler = Callable[[RuleConfig, ToolCall], RuleResult]

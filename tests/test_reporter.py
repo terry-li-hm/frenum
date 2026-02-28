@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from obex import AuditReporter
+from frenum import AuditReporter
 
 
 def _write_records(path, records):
@@ -149,7 +149,7 @@ class TestAuditReporter:
         report = reporter.generate()
         text = report.to_text()
 
-        assert "OBEX AUDIT REPORT" in text
+        assert "FRENUM AUDIT REPORT" in text
         assert "Total evaluations: 1" in text
 
     def test_to_dict_output(self, tmp_path):

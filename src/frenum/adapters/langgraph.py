@@ -1,11 +1,11 @@
-"""LangGraph adapter — wraps ToolNode with obex evaluation."""
+"""LangGraph adapter — wraps ToolNode with frenum evaluation."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from obex._types import Decision, ToolCall
-from obex.engine import Engine
+from frenum._types import Decision, ToolCall
+from frenum.engine import Engine
 
 if TYPE_CHECKING:
     from langgraph.prebuilt import ToolNode
@@ -15,7 +15,7 @@ def guarded_tool_node(
     tool_node: ToolNode,
     engine: Engine,
 ) -> Any:
-    """Wrap a LangGraph ToolNode with obex pre-evaluation.
+    """Wrap a LangGraph ToolNode with frenum pre-evaluation.
 
     Returns a function with the same signature as ToolNode.__call__,
     suitable for use as a node in a StateGraph.
@@ -28,11 +28,11 @@ def guarded_tool_node(
     Usage::
 
         from langgraph.prebuilt import ToolNode
-        from obex import Engine
-        from obex.adapters.langgraph import guarded_tool_node
+        from frenum import Engine
+        from frenum.adapters.langgraph import guarded_tool_node
 
         tools = [search, calculator]
-        engine = Engine.from_yaml("obex.yaml")
+        engine = Engine.from_yaml("frenum.yaml")
         safe_tools = guarded_tool_node(ToolNode(tools), engine)
 
         builder.add_node("tools", safe_tools)

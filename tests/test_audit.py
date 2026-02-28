@@ -3,7 +3,7 @@
 import json
 from io import StringIO
 
-from obex import AuditLogger, Engine, ToolCall
+from frenum import AuditLogger, Engine, ToolCall
 
 
 class TestAuditLogger:

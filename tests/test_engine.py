@@ -2,7 +2,7 @@
 
 import pytest
 
-from obex import Decision, Engine, ToolCall, ToolCallBlocked
+from frenum import Decision, Engine, ToolCall, ToolCallBlocked
 
 
 class TestEngineBasics:
