@@ -2,7 +2,7 @@
 
 import pytest
 
-from frenum._types import RuleConfig, RuleType, ToolCall
+from frenum._types import RuleConfig, ToolCall
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def pii_tool_call():
 def regex_block_rule():
     return RuleConfig(
         name="block_sql_injection",
-        rule_type=RuleType.REGEX_BLOCK,
+        rule_type="regex_block",
         params={
             "fields": ["query"],
             "patterns": [r"(?i)(DROP|DELETE|TRUNCATE)\s+TABLE"],
@@ -40,7 +40,7 @@ def regex_block_rule():
 def pii_rule():
     return RuleConfig(
         name="detect_pii",
-        rule_type=RuleType.PII_DETECT,
+        rule_type="pii_detect",
         params={"detectors": ["email", "hk_id"], "action": "block"},
         applies_to=["*"],
     )
@@ -50,7 +50,7 @@ def pii_rule():
 def entitlement_rule():
     return RuleConfig(
         name="tool_entitlement",
-        rule_type=RuleType.ENTITLEMENT,
+        rule_type="entitlement",
         params={
             "roles": {
                 "analyst": ["search", "get_data"],

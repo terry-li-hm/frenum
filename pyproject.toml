@@ -1,12 +1,12 @@
 [project]
 name = "frenum"
-version = "0.1.0"
-description = "Deterministic, config-driven guardrails for LLM agent tool calls"
+version = "0.2.0"
+description = "Guardrail lifecycle for LLM agent tool calls — define, lint, enforce, test, measure, audit"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "Terry Li", email = "terry.li.hm@gmail.com" }]
-keywords = ["ai", "agent", "guardrails", "llm", "tool-calls", "compliance", "audit"]
+keywords = ["ai", "agent", "guardrails", "llm", "tool-calls", "compliance", "audit", "testing", "coverage"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -18,7 +18,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Testing",
 ]
+
+[project.scripts]
+frenum = "frenum.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/terry-li-hm/frenum"
@@ -26,8 +30,9 @@ Repository = "https://github.com/terry-li-hm/frenum"
 
 [project.optional-dependencies]
 yaml = ["pyyaml>=6.0"]
+html = ["jinja2>=3.1"]
 langgraph = ["langgraph>=0.2", "langchain-core>=0.3"]
-all = ["frenum[yaml,langgraph]"]
+all = ["frenum[yaml,html,langgraph]"]
 dev = ["pytest>=8.0", "ruff>=0.8", "pyyaml>=6.0"]
 
 [build-system]

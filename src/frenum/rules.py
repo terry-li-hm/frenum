@@ -6,14 +6,17 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from frenum._types import Decision, RuleConfig, RuleResult, RuleType, ToolCall
+from frenum._types import Decision, RuleConfig, RuleResult, ToolCall
 
+# ---------------------------------------------------------------------------
 # Rule handler registry
+# ---------------------------------------------------------------------------
+
 RuleHandler = Callable[[RuleConfig, ToolCall], RuleResult]
-_RULE_REGISTRY: dict[RuleType, RuleHandler] = {}
+_RULE_REGISTRY: dict[str, RuleHandler] = {}
 
 
-def rule_handler(rule_type: RuleType) -> Callable[[RuleHandler], RuleHandler]:
+def rule_handler(rule_type: str) -> Callable[[RuleHandler], RuleHandler]:
     """Register a function as the handler for a rule type."""
 
     def decorator(fn: RuleHandler) -> RuleHandler:
@@ -23,15 +26,20 @@ def rule_handler(rule_type: RuleType) -> Callable[[RuleHandler], RuleHandler]:
     return decorator
 
 
-def get_handler(rule_type: RuleType) -> RuleHandler:
+def get_handler(rule_type: str) -> RuleHandler:
     """Look up the handler for a rule type."""
     handler = _RULE_REGISTRY.get(rule_type)
     if handler is None:
-        raise ValueError(f"No handler registered for rule type: {rule_type.value}")
+        raise ValueError(
+            f"Unknown rule type: {rule_type!r}. Valid: {sorted(_RULE_REGISTRY)}"
+        )
     return handler
 
 
+# ---------------------------------------------------------------------------
 # Built-in PII patterns (stdlib re only)
+# ---------------------------------------------------------------------------
+
 PII_PATTERNS: dict[str, str] = {
     "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
     "phone_intl": r"\+\d{1,3}[\s-]?\d{4,14}",
@@ -41,91 +49,82 @@ PII_PATTERNS: dict[str, str] = {
 }
 
 
-def _extract_string_values(obj: Any) -> list[str]:
+def _extract_strings(obj: Any) -> list[str]:
     """Recursively extract all string values from a nested structure."""
     strings: list[str] = []
     if isinstance(obj, str):
         strings.append(obj)
     elif isinstance(obj, dict):
         for v in obj.values():
-            strings.extend(_extract_string_values(v))
+            strings.extend(_extract_strings(v))
     elif isinstance(obj, (list, tuple)):
         for item in obj:
-            strings.extend(_extract_string_values(item))
+            strings.extend(_extract_strings(item))
     return strings
 
 
-@rule_handler(RuleType.REGEX_BLOCK)
+# ---------------------------------------------------------------------------
+# Rule handlers — 6 types
+# ---------------------------------------------------------------------------
+
+
+@rule_handler("regex_block")
 def eval_regex_block(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
     """Block if any specified field matches any pattern."""
     fields = rule.params.get("fields", [])
     patterns = rule.params.get("patterns", [])
-
     for field_name in fields:
         value = tool_call.args.get(field_name)
         if value is None:
             continue
-        value_str = str(value)
         for pattern in patterns:
-            match = re.search(pattern, value_str)
+            match = re.search(pattern, str(value))
             if match:
                 return RuleResult(
                     rule_name=rule.name,
-                    rule_type=rule.rule_type.value,
+                    rule_type=rule.rule_type,
                     decision=Decision.BLOCK,
-                    reason=f"Pattern matched in field '{field_name}': {match.group()[:50]}",
+                    reason=f"Pattern matched in '{field_name}': {match.group()[:50]}",
                     matched_value=match.group()[:50],
                 )
-
     return RuleResult(
-        rule_name=rule.name,
-        rule_type=rule.rule_type.value,
-        decision=Decision.ALLOW,
-        reason="No blocked patterns found",
+        rule_name=rule.name, rule_type=rule.rule_type,
+        decision=Decision.ALLOW, reason="No blocked patterns found",
     )
 
 
-@rule_handler(RuleType.REGEX_REQUIRE)
+@rule_handler("regex_require")
 def eval_regex_require(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
-    """Block if a required field is missing or doesn't match the pattern."""
+    """Block if a required field is missing or doesn't match pattern."""
     fields = rule.params.get("fields", [])
     pattern = rule.params.get("pattern", "")
-
     for field_name in fields:
         value = tool_call.args.get(field_name)
         if value is None:
             return RuleResult(
-                rule_name=rule.name,
-                rule_type=rule.rule_type.value,
+                rule_name=rule.name, rule_type=rule.rule_type,
                 decision=Decision.BLOCK,
                 reason=f"Required field '{field_name}' is missing",
             )
         if not re.fullmatch(pattern, str(value)):
             return RuleResult(
-                rule_name=rule.name,
-                rule_type=rule.rule_type.value,
+                rule_name=rule.name, rule_type=rule.rule_type,
                 decision=Decision.BLOCK,
                 reason=f"Field '{field_name}' does not match required pattern",
                 matched_value=str(value)[:50],
             )
-
     return RuleResult(
-        rule_name=rule.name,
-        rule_type=rule.rule_type.value,
-        decision=Decision.ALLOW,
-        reason="All required fields present and valid",
+        rule_name=rule.name, rule_type=rule.rule_type,
+        decision=Decision.ALLOW, reason="All required fields valid",
     )
 
 
-@rule_handler(RuleType.PII_DETECT)
+@rule_handler("pii_detect")
 def eval_pii_detect(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
     """Scan all string values in args for PII patterns."""
     detectors = rule.params.get("detectors", [])
     action = rule.params.get("action", "block")
-
-    all_strings = _extract_string_values(tool_call.args)
-    text = " ".join(all_strings)
-
+    text = " ".join(_extract_strings(tool_call.args))
     for detector_name in detectors:
         pattern = PII_PATTERNS.get(detector_name)
         if pattern is None:
@@ -134,58 +133,90 @@ def eval_pii_detect(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
         if match:
             decision = Decision.BLOCK if action == "block" else Decision.ALLOW
             return RuleResult(
-                rule_name=rule.name,
-                rule_type=rule.rule_type.value,
+                rule_name=rule.name, rule_type=rule.rule_type,
                 decision=decision,
-                reason=f"PII detected ({detector_name}): {match.group()[:10]}***",
+                reason=f"PII detected ({detector_name})",
                 matched_value=f"{match.group()[:10]}***",
             )
-
     return RuleResult(
-        rule_name=rule.name,
-        rule_type=rule.rule_type.value,
-        decision=Decision.ALLOW,
-        reason="No PII detected",
+        rule_name=rule.name, rule_type=rule.rule_type,
+        decision=Decision.ALLOW, reason="No PII detected",
     )
 
 
-@rule_handler(RuleType.ENTITLEMENT)
+@rule_handler("entitlement")
 def eval_entitlement(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
     """Check user role against tool allowlist."""
     roles: dict[str, list[str]] = rule.params.get("roles", {})
     default = rule.params.get("default", "block")
-    role_field = rule.params.get("role_field", "user_id")
-
-    user_id = getattr(tool_call, role_field, "") or tool_call.metadata.get(role_field, "")
-
-    # Find user's role
     user_role = tool_call.metadata.get("role", "")
-    if not user_role:
-        # Check if user_id matches a role name directly
-        if user_id in roles:
-            user_role = user_id
-
     if not user_role or user_role not in roles:
         decision = Decision.BLOCK if default == "block" else Decision.ALLOW
         return RuleResult(
-            rule_name=rule.name,
-            rule_type=rule.rule_type.value,
+            rule_name=rule.name, rule_type=rule.rule_type,
             decision=decision,
-            reason=f"No role mapping for user '{user_id}' (default: {default})",
+            reason=f"No role mapping for role '{user_role}' (default: {default})",
         )
-
-    allowed_tools = roles[user_role]
-    if "*" in allowed_tools or tool_call.name in allowed_tools:
+    allowed = roles[user_role]
+    if "*" in allowed or tool_call.name in allowed:
         return RuleResult(
-            rule_name=rule.name,
-            rule_type=rule.rule_type.value,
+            rule_name=rule.name, rule_type=rule.rule_type,
             decision=Decision.ALLOW,
-            reason=f"Role '{user_role}' is allowed to call '{tool_call.name}'",
+            reason=f"Role '{user_role}' allowed to call '{tool_call.name}'",
         )
-
     return RuleResult(
-        rule_name=rule.name,
-        rule_type=rule.rule_type.value,
+        rule_name=rule.name, rule_type=rule.rule_type,
         decision=Decision.BLOCK,
-        reason=f"Role '{user_role}' is not allowed to call '{tool_call.name}'",
+        reason=f"Role '{user_role}' not allowed to call '{tool_call.name}'",
+    )
+
+
+@rule_handler("budget")
+def eval_budget(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
+    """Block if estimated_cost in metadata exceeds threshold."""
+    max_cost = rule.params.get("max_cost", 0)
+    cost_field = rule.params.get("cost_field", "estimated_cost")
+    cost = tool_call.metadata.get(cost_field)
+    if cost is None:
+        on_missing = rule.params.get("on_missing", "allow")
+        decision = Decision.BLOCK if on_missing == "block" else Decision.ALLOW
+        return RuleResult(
+            rule_name=rule.name, rule_type=rule.rule_type,
+            decision=decision, reason=f"No {cost_field} in metadata",
+        )
+    try:
+        cost_val = float(cost)
+    except (TypeError, ValueError):
+        return RuleResult(
+            rule_name=rule.name, rule_type=rule.rule_type,
+            decision=Decision.BLOCK,
+            reason=f"Invalid {cost_field}: {cost!r}",
+        )
+    if cost_val > max_cost:
+        return RuleResult(
+            rule_name=rule.name, rule_type=rule.rule_type,
+            decision=Decision.BLOCK,
+            reason=f"Cost {cost_val} exceeds threshold {max_cost}",
+        )
+    return RuleResult(
+        rule_name=rule.name, rule_type=rule.rule_type,
+        decision=Decision.ALLOW,
+        reason=f"Cost {cost_val} within threshold {max_cost}",
+    )
+
+
+@rule_handler("tool_allowlist")
+def eval_tool_allowlist(rule: RuleConfig, tool_call: ToolCall) -> RuleResult:
+    """Block if tool name is not in the allowed list."""
+    allowed_tools: list[str] = rule.params.get("allowed_tools", [])
+    if tool_call.name in allowed_tools:
+        return RuleResult(
+            rule_name=rule.name, rule_type=rule.rule_type,
+            decision=Decision.ALLOW,
+            reason=f"Tool '{tool_call.name}' is in allowlist",
+        )
+    return RuleResult(
+        rule_name=rule.name, rule_type=rule.rule_type,
+        decision=Decision.BLOCK,
+        reason=f"Tool '{tool_call.name}' not in allowlist",
     )

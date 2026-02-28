@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from frenum._types import (
+    CoverageReport,
     Decision,
     EvalResult,
     RuleConfig,
+    RuleKind,
     RuleResult,
-    RuleType,
+    TestCaseConfig,
+    TestResult,
     ToolCall,
     ToolCallBlocked,
 )
@@ -23,6 +26,7 @@ class Engine:
     """Deterministic rule engine for tool call evaluation.
 
     Rules are evaluated in order. First BLOCK wins (short-circuit).
+    Semantic rules are skipped during evaluation.
     No LLM calls — every decision is reproducible.
     """
 
@@ -37,62 +41,37 @@ class Engine:
         self._audit_logger = audit_logger
         self.policy_version = policy_version
 
+    @property
+    def rules(self) -> list[RuleConfig]:
+        return list(self._rules)
+
     @classmethod
     def from_yaml(cls, path: str | Path, **kwargs: Any) -> Engine:
-        """Load engine from a YAML config file.
+        """Load engine from a YAML config file."""
+        from frenum.loader import load_policy
 
-        Requires pyyaml: pip install frenum[yaml]
-        """
-        try:
-            import yaml
-        except ImportError:
-            raise ImportError(
-                "pyyaml is required for YAML config loading. "
-                "Install it with: pip install frenum[yaml]"
-            ) from None
-
-        path = Path(path)
-        with path.open() as f:
-            config = yaml.safe_load(f)
-
-        return cls.from_dict(config, **kwargs)
+        rules, policy_version = load_policy(path)
+        return cls(rules, policy_version=policy_version, **kwargs)
 
     @classmethod
     def from_dict(cls, config: dict[str, Any], **kwargs: Any) -> Engine:
         """Load engine from a Python dict (same schema as YAML)."""
-        rules: list[RuleConfig] = []
+        from frenum.loader import load_policy_dict
+
+        rules = load_policy_dict(config)
         policy_version = config.get("policy_version", "1.0.0")
-
-        for rule_data in config.get("rules", []):
-            try:
-                rule_type = RuleType(rule_data["type"])
-            except ValueError:
-                raise ValueError(
-                    f"Unknown rule type: {rule_data['type']}. "
-                    f"Valid types: {[rt.value for rt in RuleType]}"
-                ) from None
-
-            rules.append(
-                RuleConfig(
-                    name=rule_data["name"],
-                    rule_type=rule_type,
-                    params=rule_data.get("params", {}),
-                    applies_to=rule_data.get("applies_to", ["*"]),
-                    phase=rule_data.get("phase", "pre"),
-                )
-            )
-
         return cls(rules, policy_version=policy_version, **kwargs)
 
-    def evaluate(self, tool_call: ToolCall, phase: str = "pre") -> EvalResult:
-        """Evaluate all applicable rules against a tool call.
-
-        First blocking rule short-circuits. Returns EvalResult.
-        """
+    def evaluate(
+        self, tool_call: ToolCall, phase: str = "pre",
+    ) -> EvalResult:
+        """Evaluate all applicable deterministic rules. First BLOCK short-circuits."""
         results: list[RuleResult] = []
         blocking_rule: RuleResult | None = None
 
         for rule in self._rules:
+            if rule.kind == RuleKind.SEMANTIC:
+                continue
             if rule.phase != phase:
                 continue
             if not self._rule_applies(rule, tool_call):
@@ -104,7 +83,7 @@ class Engine:
 
             if result.decision == Decision.BLOCK:
                 blocking_rule = result
-                break  # Short-circuit: first block wins
+                break
 
         decision = Decision.BLOCK if blocking_rule else Decision.ALLOW
         eval_result = EvalResult(
@@ -120,14 +99,78 @@ class Engine:
         return eval_result
 
     def guard(self, tool_call: ToolCall, phase: str = "pre") -> ToolCall:
-        """Evaluate and raise on block. Convenience for try/except patterns."""
+        """Evaluate and raise ToolCallBlocked on block."""
         result = self.evaluate(tool_call, phase)
         if result.decision == Decision.BLOCK:
             raise ToolCallBlocked(result)
         return tool_call
 
+    def run_tests(
+        self, test_cases: list[TestCaseConfig],
+    ) -> list[TestResult]:
+        """Run all test cases against the policy rules."""
+        results: list[TestResult] = []
+        for tc in test_cases:
+            eval_result = self.evaluate(tc.tool_call)
+            passed = eval_result.decision == tc.expected
+            actual_rule = (
+                eval_result.blocking_rule.rule_name
+                if eval_result.blocking_rule else None
+            )
+            reason = eval_result.reason
+
+            if tc.expected_rule and passed:
+                if actual_rule != tc.expected_rule:
+                    passed = False
+                    reason = (
+                        f"Expected rule '{tc.expected_rule}', "
+                        f"got '{actual_rule}'"
+                    )
+            if not passed and not tc.expected_rule:
+                reason = (
+                    f"Expected {tc.expected.value}, "
+                    f"got {eval_result.decision.value}: {eval_result.reason}"
+                )
+
+            results.append(TestResult(
+                test_case=tc,
+                actual=eval_result.decision,
+                actual_rule=actual_rule,
+                passed=passed,
+                reason=reason,
+                rules_evaluated=eval_result.rules_evaluated_names,
+            ))
+        return results
+
+    def calculate_coverage(
+        self, results: list[TestResult],
+    ) -> CoverageReport:
+        """Calculate guardrail coverage from test results."""
+        deterministic = [
+            r for r in self._rules if r.kind == RuleKind.DETERMINISTIC
+        ]
+        semantic = [
+            r for r in self._rules if r.kind == RuleKind.SEMANTIC
+        ]
+        det_names = {r.name for r in deterministic}
+
+        exercised: set[str] = set()
+        for r in results:
+            exercised.update(r.rules_evaluated)
+
+        covered = exercised & det_names
+        not_covered = det_names - covered
+        pct = (len(covered) / len(det_names) * 100) if det_names else 100.0
+
+        return CoverageReport(
+            total_deterministic_rules=len(det_names),
+            rules_exercised=sorted(covered),
+            rules_not_exercised=sorted(not_covered),
+            semantic_rules=[r.name for r in semantic],
+            coverage_pct=round(pct, 1),
+        )
+
     def _rule_applies(self, rule: RuleConfig, tool_call: ToolCall) -> bool:
-        """Check if a rule applies to this tool call."""
         for pattern in rule.applies_to:
             if pattern == "*" or re.fullmatch(pattern, tool_call.name):
                 return True

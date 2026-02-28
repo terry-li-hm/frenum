@@ -27,11 +27,11 @@ class TestRegexBlock:
 
 class TestRegexRequire:
     def test_present_and_valid(self):
-        from frenum._types import RuleConfig, RuleType
+        from frenum._types import RuleConfig
 
         rule = RuleConfig(
             name="require_confirmation",
-            rule_type=RuleType.REGEX_REQUIRE,
+            rule_type="regex_require",
             params={"fields": ["confirmation_id"], "pattern": r"^CONF-[A-Z0-9]{8}$"},
             applies_to=["*"],
         )
@@ -40,11 +40,11 @@ class TestRegexRequire:
         assert result.decision == Decision.ALLOW
 
     def test_missing_field_blocks(self):
-        from frenum._types import RuleConfig, RuleType
+        from frenum._types import RuleConfig
 
         rule = RuleConfig(
             name="require_confirmation",
-            rule_type=RuleType.REGEX_REQUIRE,
+            rule_type="regex_require",
             params={"fields": ["confirmation_id"], "pattern": r"^CONF-[A-Z0-9]{8}$"},
             applies_to=["*"],
         )
@@ -54,11 +54,11 @@ class TestRegexRequire:
         assert "missing" in result.reason
 
     def test_invalid_format_blocks(self):
-        from frenum._types import RuleConfig, RuleType
+        from frenum._types import RuleConfig
 
         rule = RuleConfig(
             name="require_confirmation",
-            rule_type=RuleType.REGEX_REQUIRE,
+            rule_type="regex_require",
             params={"fields": ["confirmation_id"], "pattern": r"^CONF-[A-Z0-9]{8}$"},
             applies_to=["*"],
         )

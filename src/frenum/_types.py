@@ -1,4 +1,4 @@
-"""Core types for frenum — deterministic guardrails for LLM agent tool calls."""
+"""Core types for frenum — guardrail lifecycle for LLM agent tool calls."""
 
 from __future__ import annotations
 
@@ -14,11 +14,9 @@ class Decision(Enum):
     BLOCK = "block"
 
 
-class RuleType(Enum):
-    REGEX_BLOCK = "regex_block"
-    REGEX_REQUIRE = "regex_require"
-    PII_DETECT = "pii_detect"
-    ENTITLEMENT = "entitlement"
+class RuleKind(Enum):
+    DETERMINISTIC = "deterministic"
+    SEMANTIC = "semantic"
 
 
 @dataclass(frozen=True)
@@ -35,12 +33,13 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class RuleConfig:
-    """A single rule parsed from config."""
+    """A single rule from the policy config."""
 
     name: str
-    rule_type: RuleType
+    rule_type: str  # regex_block, regex_require, pii_detect, entitlement, budget, tool_allowlist
     params: dict[str, Any]
     applies_to: list[str]  # tool name patterns, ["*"] = all
+    kind: RuleKind = RuleKind.DETERMINISTIC
     phase: str = "pre"  # "pre" or "post"
 
 
@@ -72,6 +71,10 @@ class EvalResult:
             return self.blocking_rule.reason
         return "All rules passed"
 
+    @property
+    def rules_evaluated_names(self) -> list[str]:
+        return [r.rule_name for r in self.rules_evaluated]
+
 
 class ToolCallBlocked(Exception):
     """Raised when a tool call is blocked by a rule."""
@@ -83,3 +86,51 @@ class ToolCallBlocked(Exception):
             f"Tool call '{result.tool_call.name}' blocked by rule "
             f"'{rule.rule_name}': {rule.reason}" if rule else "Blocked"
         )
+
+
+# ---------------------------------------------------------------------------
+# Testing types
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TestCaseConfig:
+    """A single test case: tool call + expected verdict."""
+
+    description: str
+    tool_call: ToolCall
+    expected: Decision
+    expected_rule: str | None = None
+
+
+@dataclass
+class TestResult:
+    """Result of running one test case."""
+
+    test_case: TestCaseConfig
+    actual: Decision
+    actual_rule: str | None
+    passed: bool
+    reason: str
+    rules_evaluated: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CoverageReport:
+    """Guardrail coverage: how many deterministic rules were exercised."""
+
+    total_deterministic_rules: int
+    rules_exercised: list[str]
+    rules_not_exercised: list[str]
+    semantic_rules: list[str]
+    coverage_pct: float
+
+
+@dataclass
+class LintWarning:
+    """A single warning or error from policy linting."""
+
+    rule_name: str | None
+    code: str
+    message: str
+    severity: str  # "error" or "warning"

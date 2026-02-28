@@ -18,7 +18,7 @@ class TestEngineBasics:
 
     def test_from_dict_invalid_rule_type(self):
         config = {"rules": [{"name": "bad", "type": "nonexistent", "params": {}}]}
-        with pytest.raises(ValueError, match="Unknown rule type"):
+        with pytest.raises(ValueError, match="unknown type"):
             Engine.from_dict(config)
 
     def test_policy_version_from_config(self, sample_config):
