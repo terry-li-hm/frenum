@@ -1,0 +1,49 @@
+[project]
+name = "limen"
+version = "0.1.0"
+description = "Deterministic, config-driven guardrails for LLM agent tool calls"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Terry Li", email = "terry.li.hm@gmail.com" }]
+keywords = ["ai", "agent", "guardrails", "llm", "tool-calls", "compliance", "audit"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://github.com/terry-li-hm/limen"
+Repository = "https://github.com/terry-li-hm/limen"
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
+langgraph = ["langgraph>=0.2", "langchain-core>=0.3"]
+all = ["limen[yaml,langgraph]"]
+dev = ["pytest>=8.0", "ruff>=0.8", "pyyaml>=6.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/limen"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
