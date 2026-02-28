@@ -41,6 +41,19 @@ print(result.decision)  # Decision.BLOCK
 print(result.reason)    # "Pattern matched in 'query': DROP TABLE"
 ```
 
+### Scaffold a new project
+
+```bash
+frenum init
+```
+
+Creates a starter `policy.yaml` and `tests.yaml` in the current directory. Lint and test immediately:
+
+```bash
+frenum lint --config policy.yaml
+frenum test --config policy.yaml --tests tests.yaml
+```
+
 ## CLI
 
 ### Regression Testing
@@ -67,6 +80,16 @@ Evidence hash: a3f8c1d2e5b7...
 ```
 
 Exit code 0 = all pass, 1 = failures. CI-ready.
+
+### Coverage Threshold
+
+Fail CI if coverage drops below a minimum:
+
+```bash
+frenum test --config policy.yaml --tests tests/ --min-coverage 80
+```
+
+Exit code 1 if tests pass but coverage is below the threshold.
 
 ### Policy Linting
 

@@ -1,10 +1,73 @@
-"""CLI entry point: frenum test, frenum lint."""
+"""CLI entry point: frenum test, frenum lint, frenum init."""
 
 from __future__ import annotations
 
 import argparse
 import sys
 from pathlib import Path
+
+_STARTER_POLICY = """\
+policy_version: "1.0.0"
+
+rules:
+  # Block dangerous SQL patterns
+  - name: block_sql_injection
+    type: regex_block
+    applies_to: ["execute_sql"]
+    params:
+      fields: ["query"]
+      patterns:
+        - "(?i)(DROP|DELETE|TRUNCATE)\\\\s+TABLE"
+
+  # Scan all tool calls for PII leakage
+  - name: detect_pii
+    type: pii_detect
+    applies_to: ["*"]
+    params:
+      detectors: [email, phone_intl, credit_card, ssn]
+      action: block
+
+  # Only allow known tools
+  - name: allowed_tools_only
+    type: tool_allowlist
+    applies_to: ["*"]
+    params:
+      allowed_tools: ["execute_sql", "search", "get_data"]
+"""
+
+_STARTER_TESTS = """\
+tests:
+  - description: SQL injection blocked
+    tool_call:
+      name: execute_sql
+      args:
+        query: "DROP TABLE users"
+    expected: block
+    expected_rule: block_sql_injection
+
+  - description: Clean query allowed
+    tool_call:
+      name: execute_sql
+      args:
+        query: "SELECT * FROM users WHERE id = 1"
+    expected: allow
+
+  - description: PII in args blocked
+    tool_call:
+      name: search
+      args:
+        query: "Contact alice@example.com"
+    expected: block
+    expected_rule: detect_pii
+
+  - description: Unknown tool blocked
+    tool_call:
+      name: delete_account
+      args:
+        user_id: "123"
+    expected: block
+    expected_rule: allowed_tools_only
+"""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +95,10 @@ def main(argv: list[str] | None = None) -> int:
     test_parser.add_argument(
         "--output", help="Write report to file (default: stdout)"
     )
+    test_parser.add_argument(
+        "--min-coverage", type=float, default=None, metavar="PCT",
+        help="Fail if coverage drops below this percentage (0-100)",
+    )
 
     # frenum lint
     lint_parser = sub.add_parser(
@@ -41,12 +108,19 @@ def main(argv: list[str] | None = None) -> int:
         "--config", required=True, help="Path to policy YAML file"
     )
 
+    # frenum init
+    sub.add_parser(
+        "init", help="Scaffold a starter policy.yaml and tests.yaml"
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "test":
         return _cmd_test(args)
     elif args.command == "lint":
         return _cmd_lint(args)
+    elif args.command == "init":
+        return _cmd_init()
     else:
         parser.print_help()
         return 2
@@ -98,7 +172,17 @@ def _cmd_test(args: argparse.Namespace) -> int:
         print(output)
 
     has_failures = any(not r.passed for r in results)
-    return 1 if has_failures else 0
+    if has_failures:
+        return 1
+
+    if args.min_coverage is not None and coverage.coverage_pct < args.min_coverage:
+        print(
+            f"Coverage {coverage.coverage_pct:.1f}% below threshold {args.min_coverage:.1f}%",
+            file=sys.stderr,
+        )
+        return 1
+
+    return 0
 
 
 def _cmd_lint(args: argparse.Namespace) -> int:
@@ -132,6 +216,28 @@ def _cmd_lint(args: argparse.Namespace) -> int:
 
     print(f"\n{len(errors)} error(s), {len(warns)} warning(s)")
     return 1 if errors else 0
+
+
+def _cmd_init() -> int:
+    policy_path = Path("policy.yaml")
+    tests_path = Path("tests.yaml")
+
+    wrote = []
+    for path, content in [(policy_path, _STARTER_POLICY), (tests_path, _STARTER_TESTS)]:
+        if path.exists():
+            print(f"  skip  {path} (already exists)", file=sys.stderr)
+        else:
+            path.write_text(content)
+            wrote.append(path)
+            print(f"  wrote {path}")
+
+    if wrote:
+        print("\nRun: frenum lint --config policy.yaml")
+        print("     frenum test --config policy.yaml --tests tests.yaml")
+    else:
+        print("\nNothing to write — both files already exist.", file=sys.stderr)
+
+    return 0
 
 
 if __name__ == "__main__":

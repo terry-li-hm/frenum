@@ -1,0 +1,109 @@
+# frenum example test cases
+# Run: frenum test --config examples/policy.yaml --tests examples/tests.yaml
+
+tests:
+  # regex_block
+  - description: SQL injection blocked
+    tool_call:
+      name: execute_sql
+      args:
+        query: "DROP TABLE users"
+    expected: block
+    expected_rule: block_sql_injection
+
+  - description: Clean query allowed
+    tool_call:
+      name: execute_sql
+      args:
+        query: "SELECT * FROM users WHERE id = 1"
+      metadata:
+        role: admin
+    expected: allow
+
+  # regex_require
+  - description: Missing confirmation blocked
+    tool_call:
+      name: send_email
+      args:
+        to: "team-distro"
+        body: "Monthly report"
+      metadata:
+        role: admin
+    expected: block
+    expected_rule: require_confirmation
+
+  - description: Valid confirmation allowed
+    tool_call:
+      name: send_email
+      args:
+        to: "team-distro"
+        body: "Monthly report"
+        confirmation_id: "CONF-AB12CD34"
+      metadata:
+        role: admin
+    expected: allow
+
+  # pii_detect
+  - description: PII in email body blocked
+    tool_call:
+      name: send_email
+      args:
+        body: "Customer HKID is A123456(7)"
+        confirmation_id: "CONF-AB12CD34"
+      metadata:
+        role: admin
+    expected: block
+    expected_rule: detect_pii
+
+  # entitlement
+  - description: Admin can call any tool
+    tool_call:
+      name: execute_sql
+      args:
+        query: "SELECT 1"
+      metadata:
+        role: admin
+    expected: allow
+
+  - description: Analyst blocked from execute_sql
+    tool_call:
+      name: execute_sql
+      args:
+        query: "SELECT 1"
+      metadata:
+        role: analyst
+    expected: block
+    expected_rule: tool_entitlement
+
+  # budget (cost_field is checked in metadata)
+  - description: Over-budget call blocked
+    tool_call:
+      name: search
+      args:
+        query: "expensive search"
+      metadata:
+        role: admin
+        estimated_cost: 15.0
+    expected: block
+    expected_rule: budget_limit
+
+  - description: Under-budget call allowed
+    tool_call:
+      name: search
+      args:
+        query: "cheap search"
+      metadata:
+        role: admin
+        estimated_cost: 5.0
+    expected: allow
+
+  # tool_allowlist
+  - description: Unknown tool blocked
+    tool_call:
+      name: delete_account
+      args:
+        user_id: "123"
+      metadata:
+        role: admin
+    expected: block
+    expected_rule: allowed_tools_only

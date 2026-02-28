@@ -1,15 +1,15 @@
 """Basic usage of frenum — evaluate tool calls against YAML rules."""
 
-from frenum import AuditLogger, AuditReporter, Engine, ToolCall
+from frenum import Engine, ToolCall
 
 # Load rules from YAML config
-engine = Engine.from_yaml("examples/config.yaml", audit_logger=AuditLogger("audit.jsonl").log)
+engine = Engine.from_yaml("examples/policy.yaml")
 
 # A safe query by an authorized user — passes through
 safe = ToolCall(
     name="execute_sql",
     args={"query": "SELECT * FROM users WHERE id = 1"},
-    metadata={"role": "operator"},
+    metadata={"role": "admin"},
 )
 result = engine.evaluate(safe)
 print(f"Safe query:  {result.decision.value}")  # allow
@@ -18,7 +18,7 @@ print(f"Safe query:  {result.decision.value}")  # allow
 dangerous = ToolCall(
     name="execute_sql",
     args={"query": "DROP TABLE users"},
-    metadata={"role": "operator"},
+    metadata={"role": "admin"},
 )
 result = engine.evaluate(dangerous)
 print(f"DROP TABLE:  {result.decision.value}")  # block
@@ -28,7 +28,7 @@ print(f"  Reason:    {result.reason}")
 pii = ToolCall(
     name="search",
     args={"query": "Contact alice@example.com"},
-    metadata={"role": "analyst"},
+    metadata={"role": "admin"},
 )
 result = engine.evaluate(pii)
 print(f"PII leak:    {result.decision.value}")  # block
@@ -43,9 +43,3 @@ unauthorized = ToolCall(
 result = engine.evaluate(unauthorized)
 print(f"Unauthed:    {result.decision.value}")  # block
 print(f"  Reason:    {result.reason}")
-
-# Generate audit report
-print()
-reporter = AuditReporter("audit.jsonl")
-report = reporter.generate()
-print(report.to_text())

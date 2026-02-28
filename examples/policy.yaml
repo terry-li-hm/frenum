@@ -1,0 +1,65 @@
+# frenum example policy — all 6 deterministic rule types + 1 semantic
+# Run: frenum test --config examples/policy.yaml --tests examples/tests.yaml
+
+policy_version: "1.0.0"
+
+rules:
+  # 1. regex_block — block dangerous SQL patterns
+  - name: block_sql_injection
+    type: regex_block
+    applies_to: ["execute_sql", "run_query"]
+    params:
+      fields: ["query"]
+      patterns:
+        - "(?i)(DROP|DELETE|TRUNCATE)\\s+TABLE"
+        - "(?i);\\s*--"
+
+  # 2. regex_require — require confirmation ID on sensitive ops
+  - name: require_confirmation
+    type: regex_require
+    applies_to: ["send_email", "transfer_funds"]
+    params:
+      fields: ["confirmation_id"]
+      pattern: "^CONF-[A-Z0-9]{8}$"
+
+  # 3. pii_detect — scan all tool calls for PII leakage
+  - name: detect_pii
+    type: pii_detect
+    applies_to: ["*"]
+    params:
+      detectors: [email, phone_intl, hk_id, credit_card, ssn]
+      action: block
+
+  # 4. entitlement — role-based tool access control
+  - name: tool_entitlement
+    type: entitlement
+    applies_to: ["*"]
+    params:
+      roles:
+        analyst: ["search", "get_data", "summarize"]
+        admin: ["*"]
+      default: block
+
+  # 5. budget — block if estimated cost exceeds threshold
+  - name: budget_limit
+    type: budget
+    applies_to: ["*"]
+    params:
+      max_cost: 10.0
+      cost_field: estimated_cost
+
+  # 6. tool_allowlist — only allow known tools
+  - name: allowed_tools_only
+    type: tool_allowlist
+    applies_to: ["*"]
+    params:
+      allowed_tools: ["search", "get_data", "summarize", "execute_sql", "send_email", "transfer_funds"]
+
+  # Semantic rule — tracked but excluded from coverage
+  - name: tone_check
+    type: regex_block
+    kind: semantic
+    applies_to: ["*"]
+    params:
+      fields: ["response"]
+      patterns: ["placeholder"]
