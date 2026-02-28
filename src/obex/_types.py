@@ -1,4 +1,4 @@
-"""Core types for limen — deterministic guardrails for LLM agent tool calls."""
+"""Core types for obex — deterministic guardrails for LLM agent tool calls."""
 
 from __future__ import annotations
 

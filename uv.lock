@@ -316,7 +316,7 @@ wheels = [
 ]
 
 [[package]]
-name = "limen"
+name = "obex"
 version = "0.1.0"
 source = { editable = "." }
 
@@ -343,7 +343,7 @@ yaml = [
 requires-dist = [
     { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2" },
-    { name = "limen", extras = ["yaml", "langgraph"], marker = "extra == 'all'" },
+    { name = "obex", extras = ["yaml", "langgraph"], marker = "extra == 'all'" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6.0" },

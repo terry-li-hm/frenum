@@ -1,4 +1,4 @@
-"""Audit report generator for limen."""
+"""Audit report generator for obex."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class Report:
         """Human-readable summary report."""
         lines = [
             "=" * 40,
-            "LIMEN AUDIT REPORT",
+            "OBEX AUDIT REPORT",
             "=" * 40,
             f"Period: {self.period_start:%Y-%m-%d %H:%M} to {self.period_end:%Y-%m-%d %H:%M}",
             f"Policy versions: {', '.join(self.policy_versions_seen) or 'N/A'}",

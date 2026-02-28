@@ -3,7 +3,7 @@
 import json
 from io import StringIO
 
-from limen import AuditLogger, Engine, ToolCall
+from obex import AuditLogger, Engine, ToolCall
 
 
 class TestAuditLogger:

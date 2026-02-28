@@ -1,8 +1,8 @@
-"""Shared fixtures for limen tests."""
+"""Shared fixtures for obex tests."""
 
 import pytest
 
-from limen._types import RuleConfig, RuleType, ToolCall
+from obex._types import RuleConfig, RuleType, ToolCall
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 import pytest
 
-from limen import Decision, Engine, ToolCall, ToolCallBlocked
+from obex import Decision, Engine, ToolCall, ToolCallBlocked
 
 
 class TestEngineBasics:

@@ -1,4 +1,4 @@
-"""Core evaluation engine for limen."""
+"""Core evaluation engine for obex."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from limen._types import (
+from obex._types import (
     Decision,
     EvalResult,
     RuleConfig,
@@ -16,7 +16,7 @@ from limen._types import (
     ToolCall,
     ToolCallBlocked,
 )
-from limen.rules import get_handler
+from obex.rules import get_handler
 
 
 class Engine:
@@ -41,14 +41,14 @@ class Engine:
     def from_yaml(cls, path: str | Path, **kwargs: Any) -> Engine:
         """Load engine from a YAML config file.
 
-        Requires pyyaml: pip install limen[yaml]
+        Requires pyyaml: pip install obex[yaml]
         """
         try:
             import yaml
         except ImportError:
             raise ImportError(
                 "pyyaml is required for YAML config loading. "
-                "Install it with: pip install limen[yaml]"
+                "Install it with: pip install obex[yaml]"
             ) from None
 
         path = Path(path)

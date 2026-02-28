@@ -1,22 +1,22 @@
-# limen
+# obex
 
 > Deterministic, config-driven guardrails for LLM agent tool calls.
 > Zero-LLM enforcement. Compliance audit trail built in.
 
-Named after the Latin word for *threshold*. Every tool call your agent makes crosses a threshold. Limen decides which ones pass.
+Named after the Latin word for *bolt* or *barrier*. The bolt on the gate that no LLM can argue past.
 
 ## Why
 
 LLM agents can now call tools autonomously — execute SQL, send emails, make API calls. Existing guardrail frameworks either use LLM calls in the enforcement path (non-deterministic, slow, expensive) or require writing Python code that compliance teams can't review.
 
-Limen is different:
+Obex is different:
 
 - **YAML config** — rules live in config files that compliance teams can review, version, and audit without reading Python
 - **Zero-LLM enforcement** — every decision is deterministic and reproducible. No AI in the guardrail path.
 - **Compliance-first** — OPA-inspired audit trail as a first-class feature, not an afterthought
 - **Framework-agnostic** — works standalone or with LangGraph, CrewAI, or any agent framework
 
-| Feature | Limen | NeMo Guardrails | LangChain Middleware | OpenAI Agents SDK |
+| Feature | Obex | NeMo Guardrails | LangChain Middleware | OpenAI Agents SDK |
 |---|---|---|---|---|
 | Config-driven (YAML) | Yes | Colang DSL | Python code | Python decorators |
 | Zero-LLM enforcement | Yes | No (LLM in loop) | Yes | Yes |
@@ -27,11 +27,11 @@ Limen is different:
 ## Quick Start
 
 ```bash
-pip install limen[yaml]
+pip install obex[yaml]
 ```
 
 ```python
-from limen import Engine, ToolCall
+from obex import Engine, ToolCall
 
 engine = Engine.from_yaml("rules.yaml")
 
@@ -100,7 +100,7 @@ rules:
 Every evaluation produces a structured JSON record (JSONL format, OPA-inspired):
 
 ```python
-from limen import AuditLogger, Engine
+from obex import AuditLogger, Engine
 
 logger = AuditLogger("audit.jsonl")
 engine = Engine.from_yaml("rules.yaml", audit_logger=logger.log)
@@ -113,7 +113,7 @@ Each record includes: `decision_id`, `timestamp`, `policy_version`, `tool_name`,
 Generate compliance-ready summaries from audit logs:
 
 ```python
-from limen import AuditReporter
+from obex import AuditReporter
 
 reporter = AuditReporter("audit.jsonl")
 report = reporter.generate()
@@ -122,7 +122,7 @@ print(report.to_text())
 
 ```
 ========================================
-LIMEN AUDIT REPORT
+OBEX AUDIT REPORT
 ========================================
 Period: 2026-02-28 10:00 to 2026-02-28 16:00
 Policy versions: 1.0.0
@@ -146,13 +146,13 @@ Human override rate: 4.0% (2 of 50 blocks overridden)
 ## LangGraph Integration
 
 ```bash
-pip install limen[langgraph]
+pip install obex[langgraph]
 ```
 
 ```python
 from langgraph.prebuilt import ToolNode
-from limen import Engine
-from limen.adapters.langgraph import guarded_tool_node
+from obex import Engine
+from obex.adapters.langgraph import guarded_tool_node
 
 tools = [search, calculator]
 engine = Engine.from_yaml("rules.yaml")
@@ -166,8 +166,8 @@ Blocked tool calls return a `ToolMessage` with the block reason — the LLM sees
 ## Programmatic Use (No YAML)
 
 ```python
-from limen import Engine, ToolCall
-from limen._types import RuleConfig, RuleType
+from obex import Engine, ToolCall
+from obex._types import RuleConfig, RuleType
 
 engine = Engine(rules=[
     RuleConfig(

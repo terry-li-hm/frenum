@@ -1,11 +1,11 @@
-"""LangGraph adapter — wraps ToolNode with limen evaluation."""
+"""LangGraph adapter — wraps ToolNode with obex evaluation."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from limen._types import Decision, ToolCall
-from limen.engine import Engine
+from obex._types import Decision, ToolCall
+from obex.engine import Engine
 
 if TYPE_CHECKING:
     from langgraph.prebuilt import ToolNode
@@ -15,7 +15,7 @@ def guarded_tool_node(
     tool_node: ToolNode,
     engine: Engine,
 ) -> Any:
-    """Wrap a LangGraph ToolNode with limen pre-evaluation.
+    """Wrap a LangGraph ToolNode with obex pre-evaluation.
 
     Returns a function with the same signature as ToolNode.__call__,
     suitable for use as a node in a StateGraph.
@@ -28,11 +28,11 @@ def guarded_tool_node(
     Usage::
 
         from langgraph.prebuilt import ToolNode
-        from limen import Engine
-        from limen.adapters.langgraph import guarded_tool_node
+        from obex import Engine
+        from obex.adapters.langgraph import guarded_tool_node
 
         tools = [search, calculator]
-        engine = Engine.from_yaml("limen.yaml")
+        engine = Engine.from_yaml("obex.yaml")
         safe_tools = guarded_tool_node(ToolNode(tools), engine)
 
         builder.add_node("tools", safe_tools)

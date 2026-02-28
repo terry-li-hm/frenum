@@ -1,4 +1,4 @@
-"""Audit logger for limen — append-only JSONL decision records."""
+"""Audit logger for obex — append-only JSONL decision records."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import IO, Any
 
-from limen._types import EvalResult
+from obex._types import EvalResult
 
 
 class AuditLogger:

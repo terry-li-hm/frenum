@@ -1,5 +1,5 @@
 [project]
-name = "limen"
+name = "obex"
 version = "0.1.0"
 description = "Deterministic, config-driven guardrails for LLM agent tool calls"
 readme = "README.md"
@@ -21,13 +21,13 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/terry-li-hm/limen"
-Repository = "https://github.com/terry-li-hm/limen"
+Homepage = "https://github.com/terry-li-hm/obex"
+Repository = "https://github.com/terry-li-hm/obex"
 
 [project.optional-dependencies]
 yaml = ["pyyaml>=6.0"]
 langgraph = ["langgraph>=0.2", "langchain-core>=0.3"]
-all = ["limen[yaml,langgraph]"]
+all = ["obex[yaml,langgraph]"]
 dev = ["pytest>=8.0", "ruff>=0.8", "pyyaml>=6.0"]
 
 [build-system]
@@ -35,7 +35,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/limen"]
+packages = ["src/obex"]
 
 [tool.ruff]
 target-version = "py310"

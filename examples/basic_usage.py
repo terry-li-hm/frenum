@@ -1,6 +1,6 @@
-"""Basic usage of limen — evaluate tool calls against YAML rules."""
+"""Basic usage of obex — evaluate tool calls against YAML rules."""
 
-from limen import AuditLogger, AuditReporter, Engine, ToolCall
+from obex import AuditLogger, AuditReporter, Engine, ToolCall
 
 # Load rules from YAML config
 engine = Engine.from_yaml("examples/config.yaml", audit_logger=AuditLogger("audit.jsonl").log)
